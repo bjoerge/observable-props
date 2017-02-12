@@ -1,5 +1,5 @@
-const {Observable} = require('rxjs')
-const props = require('observable-props')
+const Observable = require('rxjs').Observable
+const props = require('.')
 
 const object = {
   foo: 'bar',

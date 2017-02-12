@@ -1,6 +1,6 @@
-const {test} = require('tap')
+const test = require('tap').test
 
-const {Observable} = require('rxjs')
+const Observable = require('rxjs').Observable
 const props = require('./')
 
 test('one-off observable', t => {

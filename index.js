@@ -2,7 +2,6 @@
 const isObservable = require('is-observable')
 
 function create (ObservableImpl) {
-  ObservableImpl = (ObservableImpl || require('any-observable'))
   function ObservableOf (value) {
     return new ObservableImpl(observer => {
       observer.next(value)
@@ -15,6 +14,8 @@ function create (ObservableImpl) {
   }
 
   return function props (object) {
+    ObservableImpl = (ObservableImpl || require('any-observable'))
+
     return new ObservableImpl(observer => {
       let snapshot = {}
       const keys = Object.keys(object)

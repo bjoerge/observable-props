@@ -2,7 +2,7 @@
 
 ## Install
 
-    npm i -S debounce-promise
+    npm i -S observable-props
 
 ## Usage example
 

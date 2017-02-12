@@ -1,0 +1,29 @@
+{
+  "name": "observable-props",
+  "version": "0.0.0",
+  "description": "Like Bluebird.props, but for observables",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["observable", "promise-props", "props", "bluebird.props"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "is-observable": "^0.2.0",
+    "any-observable": "^0.2.0"
+  },
+  "devDependencies": {
+    "zen-observable": "^0.4.0",
+    "rxjs": "^5.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bjoerge/observable-props.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bjoerge/observable-props/issues"
+  },
+  "homepage": "https://github.com/bjoerge/observable-props#readme",
+  "runkitExampleFilename": "./example.js"
+}

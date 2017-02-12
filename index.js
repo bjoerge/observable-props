@@ -1,40 +1,48 @@
 const isObservable = require('is-observable')
 
-function create(ObservableImpl = require('any-observable')) {
-
-  function ObservableOf(value) {
+function create (ObservableImpl = require('any-observable')) {
+  function ObservableOf (value) {
     return new ObservableImpl(observer => {
       observer.next(value)
       observer.complete()
     })
   }
 
-  function toObservable(value) {
+  function toObservable (value) {
     return isObservable(value) ? value : ObservableOf(value)
   }
 
-  return function props(object) {
+  return function props (object) {
     return new ObservableImpl(observer => {
-      const snapshot = {}
+      let snapshot = {}
       const keys = Object.keys(object)
-      let pendingKeys = keys.slice()
+      let pendingInitial = keys.slice()
+      let active = keys.slice()
 
       const subscriptions = keys.map(key =>
         toObservable(object[key])
-          .subscribe(value => {
-            update(key, value)
+          .subscribe({
+            next (value) {
+              update(key, value)
+            },
+            error (err) {
+              observer.error(err)
+            },
+            complete () {
+              active.splice(active.indexOf(key), 1)
+              if (active.length === 0) {
+                observer.complete()
+              }
+            }
           })
       )
 
-      function update(key, value) {
-        if (pendingKeys) {
-          pendingKeys.splice(pendingKeys.indexOf(key), 1)
-          if (pendingKeys.length === 0) {
-            pendingKeys = null
-          }
+      function update (key, value) {
+        if (pendingInitial) {
+          pendingInitial.splice(pendingInitial.indexOf(key), 1)
         }
-        snapshot[key] = value
-        if (!pendingKeys) {
+        snapshot = Object.assign({}, snapshot, {[key]: value})
+        if (pendingInitial.length === 0) {
           observer.next(snapshot)
         }
       }

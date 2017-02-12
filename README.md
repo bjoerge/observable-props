@@ -1,8 +1,9 @@
 # `observable-props`
 
 ## Install
-
-    npm i -S observable-props
+```
+npm i -S observable-props
+```
 
 ## Usage example
 

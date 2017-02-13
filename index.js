@@ -1,9 +1,10 @@
 'use strict'
-const isObservable = require('is-observable')
+var isObservable = require('is-observable')
+var xtend = require('xtend')
 
 function create (ObservableImpl) {
   function ObservableOf (value) {
-    return new ObservableImpl(observer => {
+    return new ObservableImpl(function (observer) {
       observer.next(value)
       observer.complete()
     })
@@ -16,41 +17,48 @@ function create (ObservableImpl) {
   return function props (object) {
     ObservableImpl = (ObservableImpl || require('any-observable'))
 
-    return new ObservableImpl(observer => {
-      let snapshot = {}
-      const keys = Object.keys(object)
-      let pendingInitial = keys.slice()
-      let active = keys.slice()
+    return new ObservableImpl(function (observer) {
+      var snapshot = {}
+      var keys = Object.keys(object)
+      var pendingInitial = keys.slice()
+      var active = keys.slice()
 
-      const subscriptions = keys.map(key =>
-        toObservable(object[key])
+      var subscriptions = keys.map(function (key) {
+        return toObservable(object[key])
           .subscribe({
-            next (value) {
+            next: function (value) {
               update(key, value)
             },
-            error (err) {
+            error: function (err) {
               observer.error(err)
             },
-            complete () {
+            complete: function () {
               active.splice(active.indexOf(key), 1)
               if (active.length === 0) {
                 observer.complete()
               }
             }
           })
-      )
+      })
 
       function update (key, value) {
         if (pendingInitial) {
           pendingInitial.splice(pendingInitial.indexOf(key), 1)
         }
-        snapshot = Object.assign({}, snapshot, {[key]: value})
+
+        snapshot = xtend(snapshot)
+        snapshot[key] = value
+
         if (pendingInitial.length === 0) {
           observer.next(snapshot)
         }
       }
 
-      return () => subscriptions.forEach(sub => sub.unsubscribe())
+      return function () {
+        subscriptions.forEach(function (subscription) {
+          subscription.unsubscribe()
+        })
+      }
     })
   }
 }

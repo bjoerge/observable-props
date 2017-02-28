@@ -1,63 +1,83 @@
 'use strict'
 var isObservable = require('is-observable')
 var xtend = require('xtend')
+var hasOwn = {}.hasOwnProperty
+
+function someKeys (object, predicateFn) {
+  for (var key in object) {
+    if (hasOwn.call(object, key) && predicateFn(object[key], key, object)) {
+      return true
+    }
+  }
+  return false
+}
 
 function create (ObservableImpl) {
-  function ObservableOf (value) {
-    return new ObservableImpl(function (observer) {
-      observer.next(value)
-      observer.complete()
-    })
-  }
-
-  function toObservable (value) {
-    return isObservable(value) ? value : ObservableOf(value)
-  }
-
   return function props (object) {
     ObservableImpl = (ObservableImpl || require('any-observable'))
-
     return new ObservableImpl(function (observer) {
-      var snapshot = {}
-      var keys = Object.keys(object)
-      var pendingInitial = keys.slice()
-      var active = keys.slice()
+      var snapshot = object
 
-      var subscriptions = keys.map(function (key) {
-        return toObservable(object[key])
-          .subscribe({
-            next: function (value) {
-              update(key, value)
-            },
-            error: function (err) {
-              observer.error(err)
-            },
-            complete: function () {
-              active.splice(active.indexOf(key), 1)
-              if (active.length === 0) {
-                observer.complete()
-              }
-            }
-          })
+      var observableKeys = Object.keys(snapshot).filter(function (key) {
+        return isObservable(snapshot[key])
       })
 
-      function update (key, value) {
-        if (pendingInitial) {
-          pendingInitial.splice(pendingInitial.indexOf(key), 1)
+      var subscriptions = {}
+      var pendingKeys = observableKeys.slice()
+      observableKeys.forEach(subscribeKey)
+
+      if (observableKeys.length === 0) {
+        observer.next(snapshot)
+        observer.complete()
+      }
+
+      return function unsubscribeAll () {
+        return Object.keys(subscriptions).forEach(unsubscribeKey)
+      }
+
+      function subscribeKey (key) {
+        subscriptions[key] = object[key].subscribe({
+          next: onKeyUpdate,
+          error: onKeyError,
+          complete: onKeyComplete
+        })
+
+        function onKeyUpdate (value) {
+          pendingKeys = pendingKeys.filter(k => k !== key)
+          updateKey(key, value)
         }
-
-        snapshot = xtend(snapshot)
-        snapshot[key] = value
-
-        if (pendingInitial.length === 0) {
-          observer.next(snapshot)
+        function onKeyError (error) {
+          observer.error(error)
+        }
+        function onKeyComplete () {
+          disposeKey(key)
         }
       }
 
-      return function () {
-        subscriptions.forEach(function (subscription) {
-          subscription.unsubscribe()
-        })
+      function checkDone () {
+        if (!someKeys(subscriptions, Boolean)) {
+          observer.complete()
+        }
+      }
+
+      function disposeKey (key) {
+        subscriptions[key] = undefined
+        checkDone()
+      }
+      function unsubscribeKey (key) {
+        if (subscriptions[key] !== undefined) {
+          subscriptions[key].unsubscribe()
+          disposeKey(key)
+        }
+      }
+
+      function updateKey (key, next) {
+        var nextSnapshot = xtend(snapshot)
+        nextSnapshot[key] = next
+        snapshot = nextSnapshot
+        if (pendingKeys.length === 0) {
+          observer.next(snapshot)
+        }
       }
     })
   }

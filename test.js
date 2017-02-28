@@ -69,3 +69,30 @@ test('multiple values over time', t => {
     t.end()
   }, 200)
 })
+
+test('key replaced with another observable', t => {
+  const object = {
+    foo: 'bar',
+    observable: Observable.interval(10).map(i => `OK ${i}`)
+  }
+
+  const values = []
+  const subscription = props(object)
+    .subscribe({
+      next (snapshot) {
+        values.push(snapshot)
+      },
+      complete () {
+        t.fail('Did not expect observable to complete')
+      }
+    })
+
+  setTimeout(() => {
+    subscription.unsubscribe()
+    t.ok(values.length > 10)
+    t.same(values[0], {foo: 'bar', observable: 'OK 0'})
+    t.same(values[1], {foo: 'bar', observable: 'OK 1'})
+    t.same(values[2], {foo: 'bar', observable: 'OK 2'})
+    t.end()
+  }, 200)
+})

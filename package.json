@@ -1,6 +1,6 @@
 {
   "name": "observable-props",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Like Bluebird.props, but for observables",
   "main": "index.js",
   "scripts": {

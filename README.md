@@ -11,12 +11,11 @@ npm i -S observable-props
 import {Observable} from 'rxjs'
 import props from 'observable-props'
 
-const object = {
+props({
   foo: 'bar',
   time: Observable.interval(1000)
-}
-
-props(object).subscribe(snapshot => console.log(snapshot))
+})
+.subscribe(snapshot => console.log(snapshot))
 
 //=> { foo: 'bar', time: 0 }
 //=> { foo: 'bar', time: 1 }

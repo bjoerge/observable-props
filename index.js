@@ -43,7 +43,9 @@ function create (ObservableImpl) {
         })
 
         function onKeyUpdate (value) {
-          pendingKeys = pendingKeys.filter(k => k !== key)
+          pendingKeys = pendingKeys.filter(function (_key) {
+            return _key !== key
+          })
           updateKey(key, value)
         }
         function onKeyError (error) {

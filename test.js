@@ -128,6 +128,21 @@ test('multiple keys with observables', t => {
 
 })
 
+test('works with arrays too', t => {
+  const input = Observable.of([
+    Observable.timer(10),
+    Observable.of('foo')
+  ])
+
+  props(input, OPTIONS)
+    .first()
+    .subscribe(snapshot => {
+      t.same(snapshot, [0, 'foo'])
+      t.end()
+    })
+
+})
+
 test('sync', t => {
   const object = Observable.of({
     first: 'foo',

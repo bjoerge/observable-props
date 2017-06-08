@@ -1,4 +1,4 @@
-# `observable-props`
+# observable-props
 
 > Like Bluebird.props, but for observables.
 
@@ -53,7 +53,7 @@ By default returned observable will start emitting a new version of the object a
 # Changelog
 
 ## 2.0.0
-Instead of manually tracking props/subscriptions, this version is implemented as an operator that builds on other operators. This means compatibility with zen-observable is dropped (for now).
+Instead of manually tracking props/subscriptions, this version is implemented as an operator that builds on other operators. This means compatibility with zen-observable is dropped (at least for now).
 
 It still can be configured to work with any other observable as long as it implements the following (non standard) static methods:
 - `from` 

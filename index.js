@@ -1,125 +1,43 @@
-'use strict'
-var isObservable = require('is-observable')
-var xtend = require('xtend')
+const isObservable = require('is-observable')
+const xtend = require('xtend')
 
-// immutable omit keys from object
-function omit(ob, keys) {
-  return Object.keys(ob).reduce(function (result, key) {
-    if (keys.includes(key)) {
-      return result
-    }
-    result[key] = ob[key]
-    return result
-  }, {})
-}
-
-// mutable remove from array
-function remove(array, item) {
-  var idx = array.indexOf(item)
-  if (idx === -1) {
-    return array
-  }
-  array.splice(idx, 1)
-  return array
-}
-
-function configure (options) {
-  var ObservableImpl = (typeof options === 'function') ? options : (options || {}).Observable
-
-  return function props (object) {
-    ObservableImpl = (ObservableImpl || require('any-observable'))
-    return new ObservableImpl(function (observer) {
-
-      var observableKeys = Object.keys(object).filter(function (key) {
-        return isObservable(object[key])
-      })
-
-      if (observableKeys.length === 0) {
-        // fast path, just pass the given object through
-        observer.next(object)
-        observer.complete()
-        return
-      }
-
-      // the current snapshot
-      var snapshot = omit(object, observableKeys)
-
-      // keep track of subscriptions by key so we can unsubscribe them later
-      var subscriptionsByKey = {}
-      // keys that has not yet received any value
-      var pendingInitialKeys = observableKeys.slice()
-      // keys currently open, i.e. not completed
-      var openKeys = observableKeys.slice()
-
-      observableKeys.forEach(subscribeKey)
-
-      return function unsubscribeAll () {
-        return openKeys.forEach(unsubscribeKey)
-      }
-
-      function subscribeKey (key) {
-        var didCompleteSync = false
-        var subscription = object[key].subscribe({
-          next: onKeyUpdate,
-          error: onKeyError,
-          complete: onKeyComplete
-        })
-
-        if (!didCompleteSync) {
-          subscriptionsByKey[key] = subscription
-        }
-
-        function onKeyComplete () {
-          didCompleteSync = true
-          completeKey(key)
-        }
-
-        function onKeyUpdate (value) {
-          updateKey(key, value)
-        }
-
-        function onKeyError (error) {
-          observer.error(error)
-        }
-      }
-
-      function unsubscribeKey (key) {
-        subscriptionsByKey[key].unsubscribe()
-        subscriptionsByKey[key] = null
-      }
-
-      function completeKey (key) {
-        remove(openKeys, key)
-        if (openKeys.length === 0) {
-          observer.complete()
-        }
-      }
-
-      function updateKey (key, next) {
-        var nextSnapshot = xtend(snapshot)
-        nextSnapshot[key] = next
-        snapshot = nextSnapshot
-        remove(pendingInitialKeys, key)
-        if (pendingInitialKeys.length === 0) {
-          observer.next(snapshot)
-        }
-      }
-    })
-  }
+function setKey(source, key, value) {
+  return xtend(source, {[key]: value})
 }
 
 module.exports = configure()
 module.exports.configure = configure
 
-// todo: remove in next major
-var warned = false
-function warn() {
-  if (!warned) {
-    console.warn('observable-props\'s create() is renamed to configure() and will be removed in next major release')
-    warned = true
+function configure(config = {}) {
+  let Observable = config.Observable
+
+  props.operator = function asOperator(options) {
+    return props(this, options)
   }
-}
-module.exports.create = function () {
-  warn()
-  return configure.apply(this, arguments)
+
+  return props
+
+  function props(input, options = {}) {
+    Observable = (Observable || require('any-observable'))
+
+    return new Observable(observer => input.subscribe(observer))
+      .switchMap(object => {
+        const keyObservables = Object.keys(object)
+          .map(key => {
+            const value = object[key]
+            return isObservable(value)
+              ? Observable.from(value).map(value => [key, value])
+              : Observable.of([key, value])
+          })
+
+        return options.wait
+          ? Observable
+            .combineLatest(...keyObservables)
+            .map(pairs => pairs.reduce((acc, [key, value]) => setKey(acc, key, value), {}))
+
+          : Observable
+            .merge(...keyObservables)
+            .scan((acc, [key, value]) => setKey(acc, key, value), {})
+      })
+  }
 }

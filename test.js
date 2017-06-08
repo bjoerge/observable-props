@@ -1,62 +1,62 @@
 const test = require('tap').test
 
 const Observable = require('rxjs').Observable
-const ZenObservable = require('zen-observable')
-const props = require('./')
+const props = require('./index')
 
+const OPTIONS = {wait: true}
 test('one-off observable', t => {
-  const object = {
+  const object = Observable.of({
     foo: 'bar',
     observable: Observable.of('OK')
-  }
+  })
 
-  props(object)
+  props(object, OPTIONS)
     .subscribe({
-      next (snapshot) {
+      next(snapshot) {
         t.same(snapshot, {
           foo: 'bar',
           observable: 'OK'
         })
       },
-      complete () {
+      complete() {
         t.end()
       }
     })
 })
 
 test('delayed observable', t => {
-  const object = {
+  const object = Observable.of({
     foo: 'bar',
     observable: Observable.timer(100).map(() => 'OK')
-  }
+  })
 
-  props(object)
+  props(object, OPTIONS)
     .subscribe({
-      next (snapshot) {
+      next(snapshot) {
         t.same(snapshot, {
           foo: 'bar',
           observable: 'OK'
         })
       },
-      complete () {
+      complete() {
         t.end()
       }
     })
 })
 
 test('multiple values over time', t => {
-  const object = {
+  const object = Observable.of({
     foo: 'bar',
     observable: Observable.interval(10).map(i => `OK ${i}`)
-  }
+  })
 
   const values = []
-  const subscription = props(object)
+  const subscription = props(object, OPTIONS)
     .subscribe({
-      next (snapshot) {
+      next(snapshot) {
         values.push(snapshot)
       },
-      complete () {
+      complete() {
         t.fail('Did not expect observable to complete')
       }
     })
@@ -72,18 +72,18 @@ test('multiple values over time', t => {
 })
 
 test('key replaced with another observable', t => {
-  const object = {
+  const object = Observable.of({
     foo: 'bar',
     observable: Observable.interval(10).map(i => `OK ${i}`)
-  }
+  })
 
   const values = []
-  const subscription = props(object)
+  const subscription = props(object, OPTIONS)
     .subscribe({
-      next (snapshot) {
+      next(snapshot) {
         values.push(snapshot)
       },
-      complete () {
+      complete() {
         t.fail('Did not expect observable to complete')
       }
     })
@@ -99,12 +99,12 @@ test('key replaced with another observable', t => {
 })
 
 test('key nested with plain values', t => {
-  const object = {
+  const object = Observable.of({
     foo: 'bar',
-    nested: Observable.timer(10).switchMap(i => props({prop: i, foo: Observable.of('foo')}))
-  }
+    nested: Observable.timer(10).switchMap(i => props(Observable.of({prop: i, foo: Observable.of('foo')}), OPTIONS))
+  })
 
-  props(object)
+  props(object, OPTIONS)
     .first()
     .subscribe(snapshot => {
       t.same(snapshot, {foo: 'bar', nested: {prop: 0, foo: 'foo'}})
@@ -114,12 +114,12 @@ test('key nested with plain values', t => {
 })
 
 test('multiple keys with observables', t => {
-  const object = {
+  const object = Observable.of({
     first: Observable.timer(10),
     second: Observable.timer(100)
-  }
+  })
 
-  props(object)
+  props(object, OPTIONS)
     .first()
     .subscribe(snapshot => {
       t.same(snapshot, {first: 0, second: 0})
@@ -129,16 +129,16 @@ test('multiple keys with observables', t => {
 })
 
 test('sync', t => {
-  const object = {
+  const object = Observable.of({
     first: 'foo',
-    nested: props({
+    nested: props(Observable.of({
       foo: 'foo',
       bar: 'bar'
-    })
-  }
+    }), OPTIONS)
+  })
 
   let received = false
-  props(object)
+  props(object, OPTIONS)
     .first()
     .subscribe(snapshot => {
       received = true
@@ -148,45 +148,4 @@ test('sync', t => {
   t.ok(received)
   t.end()
 
-})
-
-
-test('can be configured with a custom observable', t => {
-  const custom = props.configure(ZenObservable)
-
-  const observable = custom({
-    foo: new ZenObservable(observer => {
-      observer.next('bar')
-      observer.complete()
-    })
-  })
-  t.ok(observable instanceof ZenObservable, 'Expected returned observable to be an instance of given observable implementation')
-  observable.subscribe({
-    next(val) {
-      t.same(val, {foo: 'bar'})
-    },
-    complete() {
-      t.end()
-    }
-  })
-})
-
-test('can be configured with custom observable (options object)', t => {
-  const custom = props.configure({Observable: ZenObservable})
-
-  const observable = custom({
-    foo: new ZenObservable(observer => {
-      observer.next('bar')
-      observer.complete()
-    })
-  })
-  t.ok(observable instanceof ZenObservable, 'Expected returned observable to be an instance of given observable implementation')
-  observable.subscribe({
-    next(val) {
-      t.same(val, {foo: 'bar'})
-    },
-    complete() {
-      t.end()
-    }
-  })
 })
